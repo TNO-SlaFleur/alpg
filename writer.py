@@ -14,220 +14,248 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-
-from configLoader import *
-config = importlib.import_module(cfgFile)
-
+import abc
 import os
 import profilegentools
-
-def writeCsvLine(fname, hnum, line):
-    if not os.path.exists(outputFolder+'/'+fname):
-        #overwrite
-        f = open(outputFolder+'/'+fname, 'w')
-    else:
-        #append
-        f = open(outputFolder+'/'+fname, 'a')
-    f.write(line + '\n')
-    f.close()
-
-def writeCsvRow(fname, hnum, data):
-    if hnum == 0:
-        with open(outputFolder+'/'+fname, 'w') as f:
-            for l in range(0, len(data)):
-                f.write(str(round(data[l])) + '\n')
-    else:
-        with open(outputFolder+'/'+fname, 'r+') as f:
-            lines = f.readlines()
-            f.seek(0)
-            f.truncate()
-            j = 0
-            for line in lines:
-                line = line.rstrip()
-                line = line + ';' + str(round(data[j])) + '\n'
-                f.write(line)
-                j = j + 1
+from configLoader import Config
 
 
-def createFile(fname):
-    if os.path.exists(fname):
-        os.utime(outputFolder+'/'+fname, None)
-    else:
-        open(outputFolder+'/'+fname, 'a').close()
+class AbstractWriter(abc.ABC):
+    @abc.abstractmethod
+    def createEmptyFiles(self):
+        pass
 
-# Function to create empty files to ensure that certain software doesn't crash for lack of files
-def createEmptyFiles():
-    createFile('Electricity_Profile.csv')
-    createFile('Electricity_Profile_GroupOther.csv')
-    createFile('Electricity_Profile_GroupInductive.csv')
-    createFile('Electricity_Profile_GroupFridges.csv')
-    createFile('Electricity_Profile_GroupElectronics.csv')
-    createFile('Electricity_Profile_GroupLighting.csv')
-    createFile('Electricity_Profile_GroupStandby.csv')
+    @abc.abstractmethod
+    def writeNeighbourhood(self, num):
+        pass
 
-    createFile('Reactive_Electricity_Profile.csv')
-    createFile('Reactive_Electricity_Profile_GroupOther.csv')
-    createFile('Reactive_Electricity_Profile_GroupInductive.csv')
-    createFile('Reactive_Electricity_Profile_GroupFridges.csv')
-    createFile('Reactive_Electricity_Profile_GroupElectronics.csv')
-    createFile('Reactive_Electricity_Profile_GroupLighting.csv')
-    createFile('Reactive_Electricity_Profile_GroupStandby.csv')
+    @abc.abstractmethod
+    def writeHousehold(self, config, house, num):
+        pass
 
-    createFile('Electricity_Profile_PVProduction.csv')
-    createFile('PhotovoltaicSettings.txt')
-    createFile('Electricity_Profile_PVProduction.csv')
-    createFile('BatterySettings.txt')
-    createFile('HeatingSettings.txt')
+    @abc.abstractmethod
+    def writeDeviceBufferTimeshiftable(self, machine, hnum):
+        pass
 
-    createFile('ElectricVehicle_Starttimes.txt')
-    createFile('ElectricVehicle_Endtimes.txt')
-    createFile('ElectricVehicle_RequiredCharge.txt')
-    createFile('ElectricVehicle_Specs.txt')
+    @abc.abstractmethod
+    def writeDeviceTimeshiftable(self, machine, hnum):
+        pass
 
-    createFile('WashingMachine_Starttimes.txt')
-    createFile('WashingMachine_Endtimes.txt')
-    createFile('WashingMachine_Profile.txt')
+    @abc.abstractmethod
+    def writeDeviceThermostat(self, machine, hnum):
+        pass
 
-    createFile('Dishwasher_Starttimes.txt')
-    createFile('Dishwasher_Endtimes.txt')
-    createFile('Dishwasher_Profile.txt')
 
-    createFile('Thermostat_Starttimes.txt')
-    createFile('Thermostat_Setpoints.txt')
+class DefaultWriter(AbstractWriter):
+    output_folder: str
 
-    # Save HeatGain profiles
-    createFile('Heatgain_Profile.csv')
-    createFile('Heatgain_Profile_Persons.csv')
-    createFile('Heatgain_Profile_Devices.csv')
+    def __init__(self, config: Config):
+        self.output_folder = config.output_dir
 
-    # Safe TapWater profiles
-    createFile('Heatdemand_Profile.csv')
-    createFile('Heatdemand_Profile_DHWTap.csv')
+    def writeCsvLine(self, fname, hnum, line):
+        if not os.path.exists(self.output_folder+'/'+fname):
+            #overwrite
+            f = open(self.output_folder+'/'+fname, 'w')
+        else:
+            #append
+            f = open(self.output_folder+'/'+fname, 'a')
+        f.write(line + '\n')
+        f.close()
 
-    createFile('Airflow_Profile_Ventilation.csv')
+    def writeCsvRow(self, fname, hnum, data):
+        if hnum == 0:
+            with open(self.output_folder+'/'+fname, 'w') as f:
+                for l in range(0, len(data)):
+                    f.write(str(round(data[l])) + '\n')
+        else:
+            with open(self.output_folder+'/'+fname, 'r+') as f:
+                lines = f.readlines()
+                f.seek(0)
+                f.truncate()
+                j = 0
+                for line in lines:
+                    line = line.rstrip()
+                    line = line + ';' + str(round(data[j])) + '\n'
+                    f.write(line)
+                    j = j + 1
 
-def writeNeighbourhood(num):
-    pass
+    def createFile(self, fname):
+        if os.path.exists(fname):
+            os.utime(self.output_folder+'/'+fname, None)
+        else:
+            open(self.output_folder+'/'+fname, 'a').close()
 
-def writeHousehold(house, num):
-    #Save the profile:
-    writeCsvRow('Electricity_Profile.csv', num, house.Consumption['Total'])
-    writeCsvRow('Electricity_Profile_GroupOther.csv', num, house.Consumption['Other'])
-    writeCsvRow('Electricity_Profile_GroupInductive.csv', num, house.Consumption['Inductive'])
-    writeCsvRow('Electricity_Profile_GroupFridges.csv', num, house.Consumption['Fridges'])
-    writeCsvRow('Electricity_Profile_GroupElectronics.csv', num, house.Consumption['Electronics'])
-    writeCsvRow('Electricity_Profile_GroupLighting.csv', num, house.Consumption['Lighting'])
-    writeCsvRow('Electricity_Profile_GroupStandby.csv', num, house.Consumption['Standby'])
+    def createEmptyFiles(self):
+        # Function to create empty files to ensure that certain software doesn't crash for lack of files
+        self.createFile('Electricity_Profile.csv')
+        self.createFile('Electricity_Profile_GroupOther.csv')
+        self.createFile('Electricity_Profile_GroupInductive.csv')
+        self.createFile('Electricity_Profile_GroupFridges.csv')
+        self.createFile('Electricity_Profile_GroupElectronics.csv')
+        self.createFile('Electricity_Profile_GroupLighting.csv')
+        self.createFile('Electricity_Profile_GroupStandby.csv')
 
-    writeCsvRow('Reactive_Electricity_Profile.csv', num, house.ReactiveConsumption['Total'])
-    writeCsvRow('Reactive_Electricity_Profile_GroupOther.csv', num, house.ReactiveConsumption['Other'])
-    writeCsvRow('Reactive_Electricity_Profile_GroupInductive.csv', num, house.ReactiveConsumption['Inductive'])
-    writeCsvRow('Reactive_Electricity_Profile_GroupFridges.csv', num, house.ReactiveConsumption['Fridges'])
-    writeCsvRow('Reactive_Electricity_Profile_GroupElectronics.csv', num, house.ReactiveConsumption['Electronics'])
-    writeCsvRow('Reactive_Electricity_Profile_GroupLighting.csv', num, house.ReactiveConsumption['Lighting'])
-    writeCsvRow('Reactive_Electricity_Profile_GroupStandby.csv', num, house.ReactiveConsumption['Standby'])
+        self.createFile('Reactive_Electricity_Profile.csv')
+        self.createFile('Reactive_Electricity_Profile_GroupOther.csv')
+        self.createFile('Reactive_Electricity_Profile_GroupInductive.csv')
+        self.createFile('Reactive_Electricity_Profile_GroupFridges.csv')
+        self.createFile('Reactive_Electricity_Profile_GroupElectronics.csv')
+        self.createFile('Reactive_Electricity_Profile_GroupLighting.csv')
+        self.createFile('Reactive_Electricity_Profile_GroupStandby.csv')
 
-    # Save HeatGain profiles
-    writeCsvRow('Heatgain_Profile.csv', num, house.HeatGain['Total'])
-    writeCsvRow('Heatgain_Profile_Persons.csv', num, house.HeatGain['PersonGain'])
-    writeCsvRow('Heatgain_Profile_Devices.csv', num, house.HeatGain['DeviceGain'])
+        self.createFile('Electricity_Profile_PVProduction.csv')
+        self.createFile('PhotovoltaicSettings.txt')
+        self.createFile('Electricity_Profile_PVProduction.csv')
+        self.createFile('BatterySettings.txt')
+        self.createFile('HeatingSettings.txt')
 
-    # Safe TapWater profiles
-    writeCsvRow('Heatdemand_Profile.csv', num, house.HeatDemand['Total'])
-    writeCsvRow('Heatdemand_Profile_DHWTap.csv', num, house.HeatDemand['DHWDemand'])
+        self.createFile('ElectricVehicle_Starttimes.txt')
+        self.createFile('ElectricVehicle_Endtimes.txt')
+        self.createFile('ElectricVehicle_RequiredCharge.txt')
+        self.createFile('ElectricVehicle_Specs.txt')
 
-    # Airflow, kind of hacky
-    writeCsvRow('Airflow_Profile_Ventilation.csv', num, house.HeatGain['VentFlow'])
+        self.createFile('WashingMachine_Starttimes.txt')
+        self.createFile('WashingMachine_Endtimes.txt')
+        self.createFile('WashingMachine_Profile.txt')
 
-    # writeCsvRow('Heatgain_Profile_Solar.csv', num, house.HeatGain['SolarGain'])
+        self.createFile('Dishwasher_Starttimes.txt')
+        self.createFile('Dishwasher_Endtimes.txt')
+        self.createFile('Dishwasher_Profile.txt')
 
-    # FIXME Add DHW Profile
+        self.createFile('Thermostat_Starttimes.txt')
+        self.createFile('Thermostat_Setpoints.txt')
 
-    #Write all devices:
-    for k, v, in house.Devices.items():
-        house.Devices[k].writeDevice(num)
+        # Save HeatGain profiles
+        self.createFile('Heatgain_Profile.csv')
+        self.createFile('Heatgain_Profile_Persons.csv')
+        self.createFile('Heatgain_Profile_Devices.csv')
 
-    #Write all heatdevices:
-    for k, v, in house.HeatingDevices.items():
-        house.HeatingDevices[k].writeDevice(num)
+        # Safe TapWater profiles
+        self.createFile('Heatdemand_Profile.csv')
+        self.createFile('Heatdemand_Profile_DHWTap.csv')
 
-    #House specific devices
-    if house.House.hasPV:
-        text = str(num)+':'
-        text += str(house.House.pvElevation)+','+str(house.House.pvAzimuth)+','+str(house.House.pvEfficiency)+','+str(house.House.pvArea)
-        writeCsvLine('PhotovoltaicSettings.txt', num, text)
+        self.createFile('Airflow_Profile_Ventilation.csv')
 
-    writeCsvRow('Electricity_Profile_PVProduction.csv', num, house.PVProfile)
+    def writeNeighbourhood(self, num):
+        pass
 
-    if house.House.hasBattery:
-        text = str(num)+':'
-        text += str(house.House.batteryPower)+','+str(house.House.batteryCapacity)+','+str(round(house.House.batteryCapacity/2))
-        writeCsvLine('BatterySettings.txt', num, text)
+    def writeHousehold(self, config, house, num):
+        #Save the profile:
+        self.writeCsvRow('Electricity_Profile.csv', num, house.Consumption['Total'])
+        self.writeCsvRow('Electricity_Profile_GroupOther.csv', num, house.Consumption['Other'])
+        self.writeCsvRow('Electricity_Profile_GroupInductive.csv', num, house.Consumption['Inductive'])
+        self.writeCsvRow('Electricity_Profile_GroupFridges.csv', num, house.Consumption['Fridges'])
+        self.writeCsvRow('Electricity_Profile_GroupElectronics.csv', num, house.Consumption['Electronics'])
+        self.writeCsvRow('Electricity_Profile_GroupLighting.csv', num, house.Consumption['Lighting'])
+        self.writeCsvRow('Electricity_Profile_GroupStandby.csv', num, house.Consumption['Standby'])
 
-    # Write what type of heating device is used
-    if house.hasHP:
-        text = str(num)+':HP'			# Heat pump
-        writeCsvLine('HeatingSettings.txt', num, text)
-    elif house.hasCHP:
-        text = str(num)+':CHP'			# Combined Heat Power
-        writeCsvLine('HeatingSettings.txt', num, text)
-    else:
-        text = str(num)+':CONVENTIONAL'	# Conventional heating device, e.g. natural gas boiler
-        writeCsvLine('HeatingSettings.txt', num, text)
+        self.writeCsvRow('Reactive_Electricity_Profile.csv', num, house.ReactiveConsumption['Total'])
+        self.writeCsvRow('Reactive_Electricity_Profile_GroupOther.csv', num, house.ReactiveConsumption['Other'])
+        self.writeCsvRow('Reactive_Electricity_Profile_GroupInductive.csv', num, house.ReactiveConsumption['Inductive'])
+        self.writeCsvRow('Reactive_Electricity_Profile_GroupFridges.csv', num, house.ReactiveConsumption['Fridges'])
+        self.writeCsvRow('Reactive_Electricity_Profile_GroupElectronics.csv', num, house.ReactiveConsumption['Electronics'])
+        self.writeCsvRow('Reactive_Electricity_Profile_GroupLighting.csv', num, house.ReactiveConsumption['Lighting'])
+        self.writeCsvRow('Reactive_Electricity_Profile_GroupStandby.csv', num, house.ReactiveConsumption['Standby'])
 
-def writeDeviceBufferTimeshiftable(machine, hnum):
-    if machine.BufferCapacity > 0 and len(machine.StartTimes) > 0:
+        # Save HeatGain profiles
+        self.writeCsvRow('Heatgain_Profile.csv', num, house.HeatGain['Total'])
+        self.writeCsvRow('Heatgain_Profile_Persons.csv', num, house.HeatGain['PersonGain'])
+        self.writeCsvRow('Heatgain_Profile_Devices.csv', num, house.HeatGain['DeviceGain'])
+
+        # Safe TapWater profiles
+        self.writeCsvRow('Heatdemand_Profile.csv', num, house.HeatDemand['Total'])
+        self.writeCsvRow('Heatdemand_Profile_DHWTap.csv', num, house.HeatDemand['DHWDemand'])
+
+        # Airflow, kind of hacky
+        self.writeCsvRow('Airflow_Profile_Ventilation.csv', num, house.HeatGain['VentFlow'])
+
+        # writeCsvRow('Heatgain_Profile_Solar.csv', num, house.HeatGain['SolarGain'])
+
+        # FIXME Add DHW Profile
+
+        #Write all devices:
+        for k, v, in house.Devices.items():
+            house.Devices[k].writeDevice(config, num)
+
+        #Write all heatdevices:
+        for k, v, in house.HeatingDevices.items():
+            house.HeatingDevices[k].writeDevice(num)
+
+        #House specific devices
+        if house.House.hasPV:
+            text = str(num)+':'
+            text += str(house.House.pvElevation)+','+str(house.House.pvAzimuth)+','+str(house.House.pvEfficiency)+','+str(house.House.pvArea)
+            self.writeCsvLine('PhotovoltaicSettings.txt', num, text)
+
+        self.writeCsvRow('Electricity_Profile_PVProduction.csv', num, house.PVProfile)
+
+        if house.House.hasBattery:
+            text = str(num)+':'
+            text += str(house.House.batteryPower)+','+str(house.House.batteryCapacity)+','+str(round(house.House.batteryCapacity/2))
+            self.writeCsvLine('BatterySettings.txt', num, text)
+
+        # Write what type of heating device is used
+        if house.hasHP:
+            text = str(num)+':HP'			# Heat pump
+            self.writeCsvLine('HeatingSettings.txt', num, text)
+        elif house.hasCHP:
+            text = str(num)+':CHP'			# Combined Heat Power
+            self.writeCsvLine('HeatingSettings.txt', num, text)
+        else:
+            text = str(num)+':CONVENTIONAL'	# Conventional heating device, e.g. natural gas boiler
+            self.writeCsvLine('HeatingSettings.txt', num, text)
+
+    def writeDeviceBufferTimeshiftable(self, machine, hnum):
+        if machine.BufferCapacity > 0 and len(machine.StartTimes) > 0:
+            text = str(hnum)+':'
+            text += profilegentools.createStringList(machine.StartTimes, None, 60)
+            self.writeCsvLine('ElectricVehicle_Starttimes.txt', hnum, text)
+
+            text = str(hnum)+':'
+            text += profilegentools.createStringList(machine.EndTimes, None, 60)
+            self.writeCsvLine('ElectricVehicle_Endtimes.txt', hnum, text)
+
+            text = str(hnum)+':'
+            text += profilegentools.createStringList(machine.EnergyLoss, None, 1, False)
+            self.writeCsvLine('ElectricVehicle_RequiredCharge.txt', hnum, text)
+
+            text = str(hnum)+':'
+            text += str(machine.BufferCapacity)+','+str(machine.Consumption)
+            self.writeCsvLine('ElectricVehicle_Specs.txt', hnum, text)
+
+    def writeDeviceTimeshiftable(self, machine, hnum):
+        if machine.name == "WashingMachine" and len(machine.StartTimes) > 0:
+            text = str(hnum)+':'
+            text += profilegentools.createStringList(machine.StartTimes, None, 60)
+            self.writeCsvLine('WashingMachine_Starttimes.txt', hnum, text)
+
+            text = str(hnum)+':'
+            text += profilegentools.createStringList(machine.EndTimes, None, 60)
+            self.writeCsvLine('WashingMachine_Endtimes.txt', hnum, text)
+
+            text = str(hnum)+':'
+            text += machine.LongProfile
+            self.writeCsvLine('WashingMachine_Profile.txt', hnum, text)
+
+        elif len(machine.StartTimes) > 0:
+            #In our case it is a dishwasher
+            text = str(hnum)+':'
+            text += profilegentools.createStringList(machine.StartTimes, None, 60)
+            self.writeCsvLine('Dishwasher_Starttimes.txt', hnum, text)
+
+            text = str(hnum)+':'
+            text += profilegentools.createStringList(machine.EndTimes, None, 60)
+            self.writeCsvLine('Dishwasher_Endtimes.txt', hnum, text)
+
+            text = str(hnum)+':'
+            text += machine.LongProfile
+            self.writeCsvLine('Dishwasher_Profile.txt', hnum, text)
+
+    def writeDeviceThermostat(self, machine, hnum):
         text = str(hnum)+':'
         text += profilegentools.createStringList(machine.StartTimes, None, 60)
-        writeCsvLine('ElectricVehicle_Starttimes.txt', hnum, text)
+        self.writeCsvLine('Thermostat_Starttimes.txt', hnum, text)
 
         text = str(hnum)+':'
-        text += profilegentools.createStringList(machine.EndTimes, None, 60)
-        writeCsvLine('ElectricVehicle_Endtimes.txt', hnum, text)
-
-        text = str(hnum)+':'
-        text += profilegentools.createStringList(machine.EnergyLoss, None, 1, False)
-        writeCsvLine('ElectricVehicle_RequiredCharge.txt', hnum, text)
-
-        text = str(hnum)+':'
-        text += str(machine.BufferCapacity)+','+str(machine.Consumption)
-        writeCsvLine('ElectricVehicle_Specs.txt', hnum, text)
-
-
-def writeDeviceTimeshiftable(machine, hnum):
-    if machine.name == "WashingMachine" and len(machine.StartTimes) > 0:
-        text = str(hnum)+':'
-        text += profilegentools.createStringList(machine.StartTimes, None, 60)
-        writeCsvLine('WashingMachine_Starttimes.txt', hnum, text)
-
-        text = str(hnum)+':'
-        text += profilegentools.createStringList(machine.EndTimes, None, 60)
-        writeCsvLine('WashingMachine_Endtimes.txt', hnum, text)
-
-        text = str(hnum)+':'
-        text += machine.LongProfile
-        writeCsvLine('WashingMachine_Profile.txt', hnum, text)
-
-    elif len(machine.StartTimes) > 0:
-        #In our case it is a dishwasher
-        text = str(hnum)+':'
-        text += profilegentools.createStringList(machine.StartTimes, None, 60)
-        writeCsvLine('Dishwasher_Starttimes.txt', hnum, text)
-
-        text = str(hnum)+':'
-        text += profilegentools.createStringList(machine.EndTimes, None, 60)
-        writeCsvLine('Dishwasher_Endtimes.txt', hnum, text)
-
-        text = str(hnum)+':'
-        text += machine.LongProfile
-        writeCsvLine('Dishwasher_Profile.txt', hnum, text)
-
-def writeDeviceThermostat(machine, hnum):
-    text = str(hnum)+':'
-    text += profilegentools.createStringList(machine.StartTimes, None, 60)
-    writeCsvLine('Thermostat_Starttimes.txt', hnum, text)
-
-    text = str(hnum)+':'
-    text += profilegentools.createStringList(machine.Setpoints)
-    writeCsvLine('Thermostat_Setpoints.txt', hnum, text)
+        text += profilegentools.createStringList(machine.Setpoints)
+        self.writeCsvLine('Thermostat_Setpoints.txt', hnum, text)

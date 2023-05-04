@@ -14,14 +14,13 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import random
 
-
-from configLoader import *
-config = importlib.import_module(cfgFile)
-
+from configLoader import Config
 import houses
 
-class neighbourhood:
+
+def neighbourhood(config: Config) -> None:
     print("Creating Neighbourhood")
     houseList = []
     pvList = [0] * len(config.householdList)
@@ -29,13 +28,13 @@ class neighbourhood:
     inductioncookingList = [0] * len(config.householdList)
 
     for i in range(0, len(config.householdList)):
-        houseList.append(houses.House())
-
+        houseList.append(houses.House(config))
+    
     #Add PV to houses:
     for i in range(0, len(config.householdList)):
         if i < (round(len(config.householdList)*(config.penetrationPV/100))):
             pvList[i] = 1
-
+    
     #And randomize:
     random.shuffle(pvList)
 
@@ -47,7 +46,7 @@ class neighbourhood:
     for i in range(0, len(config.householdList)):
         if inductioncookingList[i] == 1:
             config.householdList[i].hasInductionCooking = True
-
+    
     # Add Combined Heat Power
     i = 0
     while i < (round(len(config.householdList)*(config.penetrationCHP/100))) - (round(len(config.householdList)*(config.penetrationPV/100))):
@@ -61,7 +60,7 @@ class neighbourhood:
             if config.householdList[j].hasCHP == False: # First supply houses without PV
                 config.householdList[j].hasCHP = True
                 i = i + 1
-
+            
     # Add heat pumps
     i = 0
     while i < (round(len(config.householdList)*(config.penetrationHeatPump/100))):
@@ -100,10 +99,10 @@ class neighbourhood:
                         config.householdList[j].hasEV = True
                         added = True
                 j = j + 1
-
+    
     #Shuffle
     random.shuffle(config.householdList)
-
+        
     #And then map households to houses
     for i in range(0,len(config.householdList)):
         config.householdList[i].setHouse(houseList[i])
@@ -116,7 +115,7 @@ class neighbourhood:
             # Hence, if a household is to be more or less energy neutral we have:
             area = round( (config.householdList[i].ConsumptionYearly / config.PVProductionPerYear) * 1.6) #average panel is 1.6m2
             config.householdList[i].House.addPV(area)
-
+            
         if batteryList[i] == 1:
             # Do something based on the household size and whether the house has an EV:
             if config.householdList[i].hasEV:

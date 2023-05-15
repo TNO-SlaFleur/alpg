@@ -15,22 +15,42 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import sys, getopt, importlib, random
+import sys
+import argparse
+import importlib
+from dataclasses import dataclass
+from types import ModuleType
+from typing import Optional
 
-# Default write into a new folder
-folder = 'output/output/'
+Config = ModuleType
 
-cfgOutputDir = 'output/output/'
-outputFolder = cfgOutputDir
-cfgFile = None
-
-#Parse arguments
-opts, args = getopt.getopt(sys.argv[1:],"c:o:f",["config=","output=", "force"])
-for opt, arg in opts:
-    if opt in ("-c", "--config"):
-        cfgFile = arg
-    elif opt in ("-o", "--output"):
-        cfgOutputDir = 'output/'+arg+'/'
-
-outputFolder = cfgOutputDir
 sys.path.insert(0, 'configs')
+
+@dataclass
+class CommandLineOptions:
+    cfgFile: Optional[str] = None
+    cfgOutputDir: str = 'output/output/'
+    forceDeletion: bool = False
+
+
+def parse_cmdline_options() -> CommandLineOptions:
+    parser = argparse.ArgumentParser(prog='Artifical Load Profile Generator (ALPG)')
+    parser.add_argument('-c', '--config', type=str, required=True)
+    parser.add_argument('-o', '--output', type=str, required=True)
+    parser.add_argument('-f', '--force', action='store_true')
+    args = parser.parse_args()
+
+    return CommandLineOptions(cfgFile=args.config,
+                              cfgOutputDir='output/' + args.output + '/',
+                              forceDeletion=args.force)
+
+
+def load_config(cmd_options: CommandLineOptions) -> Config:
+    config_module = importlib.import_module(cmd_options.cfgFile)
+    config = config_module.Config()
+    config.config_file = cmd_options.cfgFile
+    config.output_dir = cmd_options.cfgOutputDir
+    config.writer = config.writer_class(config)
+    config.householdList = [householdCnf.to_model(config) for householdCnf in config.householdConfigs]
+
+    return config

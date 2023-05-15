@@ -14,31 +14,29 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import random
 
-
-from configLoader import *
-config = importlib.import_module(cfgFile)
-
+import configLoader
 import profilegentools
 
 class House:
     #In the end we need to define houses as well with their orientation
-    def __init__(self):
+    def __init__(self, config: configLoader.Config):
+        self.config = config
         self.hasPV = False
         self.hasBattery = False
 
     def addPV(self, area):
         self.hasPV = True
         self.pvArea = area
-        self.pvEfficiency = random.randint(config.PVEfficiencyMin, config.PVEfficiencyMax)
-        self.pvAzimuth = profilegentools.gaussMinMax(config.PVAzimuthMean, config.PVAzimuthSigma)
+        self.pvEfficiency = random.randint(self.config.PVEfficiencyMin, self.config.PVEfficiencyMax)
+        self.pvAzimuth = profilegentools.gaussMinMax(self.config.PVAzimuthMean, self.config.PVAzimuthSigma)
         if(self.pvAzimuth < 0):
             self.pvAzimuth = self.pvAzimuth + 360
-        self.pvElevation = profilegentools.gaussMinMax(config.PVAngleMean, config.PVAngleSigma)
+        self.pvElevation = profilegentools.gaussMinMax(self.config.PVAngleMean, self.config.PVAngleSigma)
 
     def addBattery(self, capacity, power):
         if capacity > 0:
             self.hasBattery = True
             self.batteryCapacity = capacity
             self.batteryPower = power
-			

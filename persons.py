@@ -15,16 +15,15 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import random
 
-from configLoader import *
-config = importlib.import_module(cfgFile)
+import configLoader
 import profilegentools
 
-class Person:
-    def __init__(self, age):
-        self.generate(age)
 
-    def generate(self, age):
+class Person:
+    def __init__(self, config: configLoader.Config, age):
+        self.config = config
         #Variates could also use a gauss distribution, some persons are more predictable than others ;)
         self.Age = age
 
@@ -67,8 +66,6 @@ class Person:
 
         # Generate Heat parameters
         self.generateHeatParams()
-
-
 
     # def generateActivity(self):
     # 	self.WorkdaySportday = 1 + random.randint(1,5)
@@ -163,7 +160,6 @@ class Person:
 
         return activeList
 
-
     def simulateWeekend(self, day):
         #select variables
         eventList = []
@@ -235,46 +231,47 @@ class Person:
             return self.simulateWeekend(day)
 
 
-
-
 class PersonWorker(Person):
-    def __init__(self, age):
-        self.generate(age)
+    def __init__(self, config: configLoader.Config, age):
+        super(PersonWorker, self).__init__(config, age)
+
         if age>55 or random.randint(0,2)==0: #Older people can get a day off sometimes, such as BAPO in the education. Furthermore 33% has a home working day: http://www.kamer033.nl/nieuws/in-8-tips-een-productieve-thuiswerkdag/
             self.generateWorkdays(4)
         else:
             self.generateWorkdays(5)
 
+
 class PersonParttimeWorker(Person):
-    def __init__(self, age):
-        self.generate(age)
+    def __init__(self, config: configLoader.Config, age):
+        super(PersonParttimeWorker, self).__init__(config, age)
+
         self.generateWorkdays(random.randint(2,3))
 
 
 class PersonStudent(Person):
-    def __init__(self, age):
-        self.generate(age)
+    def __init__(self, config: configLoader.Config, age):
+        super(PersonStudent, self).__init__(config, age)
+
         self.WorkdayArrival_Avg			= self.WorkdayLeave_Avg + profilegentools.gaussMinMax(7*60, 30)
         if(age < 16):
             self.WorkdayBedTime_Avg		= profilegentools.gaussMinMax((23-(16-age)*0.25)*60, 30)
             self.WeekendBedTime_Avg		= profilegentools.gaussMinMax((23-(16-age)*0.25)*60, 30)
         self.WorkdaySport_Avg			= profilegentools.gaussMinMax(19*60, 1*60)
 
+
 class PersonJobless(Person):
-    def __init__(self, age):
-        self.generate(age)
+    def __init__(self, config: configLoader.Config, age):
+        super(PersonJobless, self).__init__(config, age)
+
         self.generateWorkdays(0)
 
 
 class PersonRetired(Person):
-    def __init__(self, age):
-        self.generate(age)
+    def __init__(self, config: configLoader.Config, age):
+        super(PersonRetired, self).__init__(config, age)
+
         self.generateWorkdays(0)
         self.WeekendWakeUp_Avg 			= profilegentools.gaussMinMax(8.5*60, 1*60)
         self.WeekendActivities 			= 0.7 - (0.03*(age-65))
         self.WorkdayBedTime_Avg			= profilegentools.gaussMinMax((23-(age-65)*0.15)*60, 30)
         self.WeekendBedTime_Avg			= profilegentools.gaussMinMax((23-(age-65)*0.15)*60, 30)
-		
-		
-		
-		

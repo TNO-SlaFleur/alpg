@@ -25,7 +25,7 @@
 
 import random
 
-from configLoader import Config
+from alpg.configLoader import Config
 
 
 # HeatDevice is the overall class for these devices

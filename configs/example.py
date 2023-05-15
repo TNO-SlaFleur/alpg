@@ -20,147 +20,153 @@
 
 #This is an example configuration file!
 
-# Select the output writer
-import writer as writer
-
-#Random seed
-seed = 42
-
-#input files:
-weather_irradiation = 'input/weather/solarirradiation_twenthe.csv'
-weather_timebaseDataset = 3600 #in seconds per interval
-
-
-#Simulation:
-#number of days to simulate and skipping of initial days. Simulation starts at Sunday January 1.
-numDays = 365			# number of days
-startDay = 0			# Initial day
-
-
 #Select the geographic location. Refer to the Astral plugin to see available locations (or give a lon+lat)
 # Use e.g. https://www.latlong.net/
 from astral import Location
 
-location = Location()
-location.solar_depression = 'civil'
-location.latitude = 52.239095
-location.longitude = 6.857018
-location.timezone = 'Europe/Amsterdam'
-location.elevation = 0
+from alpg.writer import DEMKitWriter
 
-#Select the devices in the neighbourhood
-
-#Devices
-#Scale overall consumption:
-consumptionFactor = 1.0 #consumption was a bit too high
-
-# Penetration of emerging technology in percentages
-# all values must be between 0-100
-# These indicate what percentage of the houses has a certain device
-
-# Electric mobility, restriction that the sum <= 100
-# Note, households with larger driving distances will receive EVs first
-penetrationEV 				= 25
-penetrationPHEV 			= 25
-
-# PV and storage, restriction that Battery <= PV
-# Note PV and battery size depend on the annual household consumption
-# This emulates the Dutch "nul-op-the-meter regime (net zero annual electricity usage)
-penetrationPV				= 50
-penetrationBattery 			= 10	#Note only houses with PV will receive a battery!
-
-# Heating systems, with restriction that the sum <= 100
-penetrationHeatPump 		= 25
-penetrationCHP				= 5		# Combined heat and power
-
-penetrationInductioncooking = 25
+from alpg.config import (HouseholdSingleWorkerConfig,
+                         HouseholdSingleRetiredConfig,
+                         HouseholdDualWorkerConfig,
+                         HouseholdDualRetiredConfig,
+                         HouseholdFamilyDualWorkerConfig)
 
 
-#Device parameters:
-#EV
-capacityEV = 	50000	#Wh
-powerEV = 		11000	#W
-capacityPHEV = 	10000	#Wh
-powerPHEV = 	3700	#W
+class Config:
+    #Random seed
+    seed = 42
 
-#PV
-PVProductionPerYear = 	220		#average kWh per m2 solar panel on annual basis
-PVAngleMean = 			35 		#degrees, 0 is horizontal to earth surface
-PVAngleSigma = 			10		#degrees
-PVAzimuthMean = 		180 	#degrees, 0 is north, 90 is east
-PVAzimuthSigma = 		90 		#degrees
-PVEfficiencyMin = 		18		#% of theoretical max
-PVEfficiencyMax = 		22		#% of theoretical max
+    # Select the output writer
+    writer_class = DEMKitWriter
 
-#Driving distances
-commuteDistanceMean = 	25		#km
-commuteDistanceSigma = 	10		#km
+    #input files:
+    weather_irradiation = 'input/weather/solarirradiation_twenthe.csv'
+    weather_timebaseDataset = 3600 #in seconds per interval
 
 
-#Battery
-capacityBatteryLarge = 	5000 	#Wh
-capacityBatteryMedium = 4000  	#Wh
-capacityBatterySmall = 	2000 	#Wh
-powerBatteryLarge = 	3700 	#W
-powerBatteryMedium = 	3700  	#W
-powerBatterySmall = 	3700 	#W
+    #Simulation:
+    #number of days to simulate and skipping of initial days. Simulation starts at Sunday January 1.
+    numDays = 365			# number of days
+    startDay = 0			# Initial day
 
 
-#Kitchen
-#Consumption of devices
-ConsumptionOven = 				2000	#W
-ConsumptionMicroWave = 			800		#W
-ConsumptionStoveVentilation = 	120 	#W #But this is maximum, usually set lower!
-ConsumptionInductionStove = 	2200 	#W #http://homeguides.sfgate.com/many-watts-induction-stove-85380.html
+    location = Location()
+    location.solar_depression = 'civil'
+    location.latitude = 52.239095
+    location.longitude = 6.857018
+    location.timezone = 'Europe/Amsterdam'
+    location.elevation = 0
 
-ConsumptionFridgeBigMin = 		80		#W
-ConsumptionFridgeBigMax = 		120		#W
-ConsumptionFridgeSmallMin = 	50		#W
-ConsumptionFridgeSmallMax = 	80		#W
+    #Select the devices in the neighbourhood
 
-ConsumptionKettle = 			2000	#W
+    #Devices
+    #Scale overall consumption:
+    consumptionFactor = 1.0 #consumption was a bit too high
 
-#White goods
-ConsumptionIron = 				2000	#W
-ConsumptionVacuumcleaner = 		1500	#W
+    # Penetration of emerging technology in percentages
+    # all values must be between 0-100
+    # These indicate what percentage of the houses has a certain device
 
-#House
-ConsumptionHouseVentilation = 	50 		#W
+    # Electric mobility, restriction that the sum <= 100
+    # Note, households with larger driving distances will receive EVs first
+    penetrationEV 				= 25
+    penetrationPHEV 			= 25
+
+    # PV and storage, restriction that Battery <= PV
+    # Note PV and battery size depend on the annual household consumption
+    # This emulates the Dutch "nul-op-the-meter regime (net zero annual electricity usage)
+    penetrationPV				= 50
+    penetrationBattery 			= 10	#Note only houses with PV will receive a battery!
+
+    # Heating systems, with restriction that the sum <= 100
+    penetrationHeatPump 		= 25
+    penetrationCHP				= 5		# Combined heat and power
+
+    penetrationInductioncooking = 25
 
 
-#Household randomization
-#all values must be between 0-1000
-familyOutingChanceMin = 			10 	#percentage
-familyOutingChanceMax = 			20 	#percentage
-personWeekdayActivityChanceMin = 	20 	#percentage
-personWeekdayActivityChanceMax = 	30 	#percentage
-personWeekendActivityChanceMin = 	20 	#percentage
-personWeekendActivityChanceMax = 	30 	#percentage
+    #Device parameters:
+    #EV
+    capacityEV = 	50000	#Wh
+    powerEV = 		11000	#W
+    capacityPHEV = 	10000	#Wh
+    powerPHEV = 	3700	#W
+
+    #PV
+    PVProductionPerYear = 	220		#average kWh per m2 solar panel on annual basis
+    PVAngleMean = 			35 		#degrees, 0 is horizontal to earth surface
+    PVAngleSigma = 			10		#degrees
+    PVAzimuthMean = 		180 	#degrees, 0 is north, 90 is east
+    PVAzimuthSigma = 		90 		#degrees
+    PVEfficiencyMin = 		18		#% of theoretical max
+    PVEfficiencyMax = 		22		#% of theoretical max
+
+    #Driving distances
+    commuteDistanceMean = 	25		#km
+    commuteDistanceSigma = 	10		#km
 
 
+    #Battery
+    capacityBatteryLarge = 	5000 	#Wh
+    capacityBatteryMedium = 4000  	#Wh
+    capacityBatterySmall = 	2000 	#Wh
+    powerBatteryLarge = 	3700 	#W
+    powerBatteryMedium = 	3700  	#W
+    powerBatterySmall = 	3700 	#W
 
-householdList = []
 
-#Select the types of households
-import households
+    #Kitchen
+    #Consumption of devices
+    ConsumptionOven = 				2000	#W
+    ConsumptionMicroWave = 			800		#W
+    ConsumptionStoveVentilation = 	120 	#W #But this is maximum, usually set lower!
+    ConsumptionInductionStove = 	2200 	#W #http://homeguides.sfgate.com/many-watts-induction-stove-85380.html
 
-for i in range(0,1):
-    householdList.append(households.HouseholdSingleWorker())
+    ConsumptionFridgeBigMin = 		80		#W
+    ConsumptionFridgeBigMax = 		120		#W
+    ConsumptionFridgeSmallMin = 	50		#W
+    ConsumptionFridgeSmallMax = 	80		#W
 
-for i in range(0,2):
-    householdList.append(households.HouseholdSingleRetired())
+    ConsumptionKettle = 			2000	#W
 
-for i in range(0,1):
-    householdList.append(households.HouseholdDualWorker(True))
+    #White goods
+    ConsumptionIron = 				2000	#W
+    ConsumptionVacuumcleaner = 		1500	#W
 
-for i in range(0,1):
-    householdList.append(households.HouseholdDualWorker(False))
+    #House
+    ConsumptionHouseVentilation = 	50 		#W
 
-for i in range(0,2):
-    householdList.append(households.HouseholdDualRetired())
 
-for i in range(0,2):
-    householdList.append(households.HouseholdFamilyDualWorker(True))
+    #Household randomization
+    #all values must be between 0-1000
+    familyOutingChanceMin = 			10 	#percentage
+    familyOutingChanceMax = 			20 	#percentage
+    personWeekdayActivityChanceMin = 	20 	#percentage
+    personWeekdayActivityChanceMax = 	30 	#percentage
+    personWeekendActivityChanceMin = 	20 	#percentage
+    personWeekendActivityChanceMax = 	30 	#percentage
 
-for i in range(0,1):
-    householdList.append(households.HouseholdFamilyDualWorker(False))
+
+    householdConfigs = []
+
+    for i in range(0, 1):
+        householdConfigs.append(HouseholdSingleWorkerConfig())
+
+    for i in range(0, 2):
+        householdConfigs.append(HouseholdSingleRetiredConfig())
+
+    for i in range(0, 1):
+        householdConfigs.append(HouseholdDualWorkerConfig(True))
+
+    for i in range(0, 1):
+        householdConfigs.append(HouseholdDualWorkerConfig(False))
+
+    for i in range(0, 2):
+        householdConfigs.append(HouseholdDualRetiredConfig())
+
+    for i in range(0, 2):
+        householdConfigs.append(HouseholdFamilyDualWorkerConfig(True))
+
+    for i in range(0, 1):
+        householdConfigs.append(HouseholdFamilyDualWorkerConfig(False))

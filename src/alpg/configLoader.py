@@ -45,12 +45,17 @@ def parse_cmdline_options() -> CommandLineOptions:
                               forceDeletion=args.force)
 
 
+def init_config(config: Config) -> Config:
+    config.writer = config.writer_class(config)
+    config.householdList = [householdCnf.to_model(config) for householdCnf in config.householdConfigs]
+    return config
+
+
 def load_config(cmd_options: CommandLineOptions) -> Config:
     config_module = importlib.import_module(cmd_options.cfgFile)
     config = config_module.Config()
     config.config_file = cmd_options.cfgFile
     config.output_dir = cmd_options.cfgOutputDir
-    config.writer = config.writer_class(config)
-    config.householdList = [householdCnf.to_model(config) for householdCnf in config.householdConfigs]
+    init_config(config)
 
     return config

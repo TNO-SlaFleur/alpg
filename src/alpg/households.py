@@ -18,11 +18,11 @@ import math
 import copy
 import random
 
-import configLoader
-import profilegentools
-import persons
-import devices
-import heatdemand
+from alpg import configLoader
+from alpg import profilegentools
+from alpg import persons
+from alpg import devices
+from alpg import heatdemand
 
 
 ELECTRIC_VEHICLE_DEVICE = 'ElectricVehicle'

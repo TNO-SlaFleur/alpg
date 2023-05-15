@@ -16,9 +16,9 @@
 
 import random
 
-from configLoader import Config
-import houses
-from households import ELECTRIC_VEHICLE_DEVICE
+from alpg.configLoader import Config
+from alpg import houses
+from alpg.households import ELECTRIC_VEHICLE_DEVICE
 
 
 def neighbourhood(config: Config) -> None:

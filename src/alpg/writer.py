@@ -23,11 +23,11 @@ from typing import Optional
 
 import pandas
 
-import profilegentools
-from configLoader import Config
-from devices import DeviceElectricalVehicle, DeviceWashingMachine, DeviceDishwasher
-from heatdemand import Thermostat
-from households import THERMOSTAT_DEVICE, ELECTRIC_VEHICLE_DEVICE, DISHWASHER_DEVICE, WASHING_MACHINE_DEVICE
+from alpg import profilegentools
+from alpg.configLoader import Config
+from alpg.devices import DeviceElectricalVehicle, DeviceWashingMachine, DeviceDishwasher
+from alpg.heatdemand import Thermostat
+from alpg.households import THERMOSTAT_DEVICE, ELECTRIC_VEHICLE_DEVICE, DISHWASHER_DEVICE, WASHING_MACHINE_DEVICE
 
 
 class AbstractWriter(abc.ABC):

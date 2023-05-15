@@ -22,18 +22,18 @@ from dataclasses import dataclass
 
 from astral import Location
 
-from households import (HouseholdModel,
-                        HouseholdCoupleModel,
-                        HouseholdDualWorkerModel,
-                        HouseholdDualRetiredModel,
-                        HouseholdSingleRetiredModel,
-                        HouseholdSingleWorkerModel,
-                        HouseholdSingleJoblessModel,
-                        HouseholdSingleParttimeModel,
-                        HouseholdFamilyDualParentModel,
-                        HouseholdFamilyDualWorkerModel,
-                        HouseholdFamilySingleParentModel)
-from writer import DEMKitWriter
+from alpg.households import (HouseholdModel,
+                             HouseholdCoupleModel,
+                             HouseholdDualWorkerModel,
+                             HouseholdDualRetiredModel,
+                             HouseholdSingleRetiredModel,
+                             HouseholdSingleWorkerModel,
+                             HouseholdSingleJoblessModel,
+                             HouseholdSingleParttimeModel,
+                             HouseholdFamilyDualParentModel,
+                             HouseholdFamilyDualWorkerModel,
+                             HouseholdFamilySingleParentModel)
+from alpg.writer import DEMKitWriter
 
 
 class HouseholdConfig(abc.ABC):

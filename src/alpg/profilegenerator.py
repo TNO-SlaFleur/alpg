@@ -20,9 +20,9 @@ import os
 import random
 from types import ModuleType
 
-import configLoader
-import neighbourhood
-from writer import AbstractWriter, PandasWriter, DEMKitWriter
+from alpg import configLoader
+from alpg import neighbourhood
+from alpg.writer import AbstractWriter, PandasWriter, DEMKitWriter
 
 Writer = ModuleType
 

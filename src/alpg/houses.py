@@ -16,8 +16,8 @@
 
 import random
 
-import configLoader
-import profilegentools
+from alpg import configLoader
+from alpg import profilegentools
 
 class House:
     #In the end we need to define houses as well with their orientation

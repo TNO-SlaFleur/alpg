@@ -17,8 +17,8 @@
 
 import random
 
-import configLoader
-import profilegentools
+from alpg import configLoader
+from alpg import profilegentools
 
 
 class Person:

@@ -22,6 +22,7 @@ from types import ModuleType
 
 import configLoader
 import neighbourhood
+from writer import AbstractWriter, PandasWriter, DEMKitWriter
 
 Writer = ModuleType
 
@@ -45,7 +46,7 @@ def prepare_output_directory(cmd_options: configLoader.CommandLineOptions) -> No
             exit()
 
 
-def write_output(config: configLoader.Config):
+def write_output(config: configLoader.Config) -> AbstractWriter:
     # Create empty files
     config.writer.createEmptyFiles()
 
@@ -57,6 +58,8 @@ def write_output(config: configLoader.Config):
         print("Writing Household "+str(hnum+1)+" of "+str(numOfHouseholds), flush=True)
         config.writer.writeHousehold(config, household, hnum)
         hnum = hnum + 1
+
+    return config.writer
 
 
 def simulate(config: configLoader.Config):

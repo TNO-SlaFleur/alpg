@@ -25,6 +25,11 @@ import devices
 import heatdemand
 
 
+ELECTRIC_VEHICLE_DEVICE = 'ElectricVehicle'
+WASHING_MACHINE_DEVICE = 'WashingMachine'
+DISHWASHER_DEVICE = 'DishwashMachine'
+THERMOSTAT_DEVICE = 'Thermostat'
+
 class HouseholdModel:
     #Note to self, must simulate whole household at once!
 
@@ -122,13 +127,13 @@ class HouseholdModel:
                             "Ventilation": devices.DeviceVentilation(self.config.ConsumptionHouseVentilation), \
                             "Ironing": devices.DeviceIroning(self.config.ConsumptionIron), \
                             "Vacuumcleaner": devices.DeviceVacuumcleaner(self.config.ConsumptionVacuumcleaner), \
-                            "WashingMachine": devices.DeviceWashingMachine(), \
-                            "DishwashMachine": devices.DeviceDishwasher(), \
-                            "ElectricalVehicle": devices.DeviceElectricalVehicle(), \
+                            WASHING_MACHINE_DEVICE: devices.DeviceWashingMachine(), \
+                            DISHWASHER_DEVICE: devices.DeviceDishwasher(), \
+                            ELECTRIC_VEHICLE_DEVICE: devices.DeviceElectricalVehicle(), \
                             "PVPanel" : devices.DeviceSolarPanel()}
 
         self.HeatingDevices = {	"PersonGain": heatdemand.PersonGain(config), \
-                                   "Thermostat": heatdemand.Thermostat(config), \
+                                   THERMOSTAT_DEVICE: heatdemand.Thermostat(config), \
                                    "VentFlow": heatdemand.Ventilation(config), \
                                    "DHWDemand": heatdemand.DHWDemand(config) }
 
@@ -314,7 +319,7 @@ class HouseholdModel:
 
             # Device heat gain is done through rescaling
             # Thermostat
-            self.HeatingDevices["Thermostat"].simulate(1440, day, self.Persons, self.OccupancyPersonsDay)
+            self.HeatingDevices[THERMOSTAT_DEVICE].simulate(1440, day, self.Persons, self.OccupancyPersonsDay)
 
             # Initialize the ventilation profile
             self.HeatingDevices["VentFlow"].simulate(1440, self.OccupancyPersonsDay)
@@ -348,7 +353,7 @@ class HouseholdModel:
 
                 #Whats for EV?
                 if self.hasEV > 0:
-                    self.Devices["ElectricalVehicle"].simulate(self.config, day, self.Persons[0], eventStart, eventDuration)
+                    self.Devices[ELECTRIC_VEHICLE_DEVICE].simulate(self.config, day, self.Persons[0], eventStart, eventDuration)
 
                 if (((dayOfWeek in self.WashingDays) and (random.random()  < 0.9)) or (random.random()  < 0.1)):
                     self.Devices["WashingMachine"].simulate(self.config, 1440, day, self.OccupancyAdultsDay, self.washingMoment[dayOfWeek])
@@ -389,9 +394,7 @@ class HouseholdModel:
         else:
             self.PVProfile = [0] * self.config.numDays * int(24*3600/60)
 
-
     def saveToFile(self, num):
-        text = []
         self.config.writer.writeHousehold(self, self.config, num)
 
 

@@ -33,7 +33,7 @@ from households import (HouseholdModel,
                         HouseholdFamilyDualParentModel,
                         HouseholdFamilyDualWorkerModel,
                         HouseholdFamilySingleParentModel)
-from writer import DefaultWriter
+from writer import DEMKitWriter
 
 
 class HouseholdConfig(abc.ABC):
@@ -116,7 +116,7 @@ class Config:
     # Random seed
     seed = 42
 
-    writer_class = DefaultWriter
+    writer_class = DEMKitWriter
 
     # input files:
     weather_irradiation = 'input/weather/solarirradiation_twenthe.csv'
@@ -124,7 +124,7 @@ class Config:
 
     # Simulation:
     # number of days to simulate and skipping of initial days. Simulation starts at Sunday January 1.
-    numDays = 7  # number of days
+    numDays = 365  # number of days
     startDay = 0  # Initial day
 
     # Select the geographic location. Refer to the Astral plugin to see available locations (or give a lon+lat)

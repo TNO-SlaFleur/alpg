@@ -18,6 +18,7 @@ import random
 
 from configLoader import Config
 import houses
+from households import ELECTRIC_VEHICLE_DEVICE
 
 
 def neighbourhood(config: Config) -> None:
@@ -91,11 +92,11 @@ def neighbourhood(config: Config) -> None:
                 if config.householdList[j].Persons[0].DistanceToWork == drivingDistance[i]:
                     if config.householdList[j].hasEV == False:
                         if i < (round(len(config.householdList)*(config.penetrationEV/100))):
-                            config.householdList[j].Devices["ElectricalVehicle"].BufferCapacity = config.capacityEV
-                            config.householdList[j].Devices["ElectricalVehicle"].Consumption = config.powerEV
+                            config.householdList[j].Devices[ELECTRIC_VEHICLE_DEVICE].BufferCapacity = config.capacityEV
+                            config.householdList[j].Devices[ELECTRIC_VEHICLE_DEVICE].Consumption = config.powerEV
                         else:
-                            config.householdList[j].Devices["ElectricalVehicle"].BufferCapacity = config.capacityPHEV
-                            config.householdList[j].Devices["ElectricalVehicle"].Consumption = config.powerPHEV
+                            config.householdList[j].Devices[ELECTRIC_VEHICLE_DEVICE].BufferCapacity = config.capacityPHEV
+                            config.householdList[j].Devices[ELECTRIC_VEHICLE_DEVICE].Consumption = config.powerPHEV
                         config.householdList[j].hasEV = True
                         added = True
                 j = j + 1

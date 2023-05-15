@@ -16,11 +16,23 @@
 
 import abc
 import os
+from dataclasses import dataclass
+from datetime import timedelta
+from enum import Enum
+from typing import Optional
+
+import pandas
+
 import profilegentools
 from configLoader import Config
+from devices import DeviceElectricalVehicle, DeviceWashingMachine, DeviceDishwasher
+from heatdemand import Thermostat
+from households import THERMOSTAT_DEVICE, ELECTRIC_VEHICLE_DEVICE, DISHWASHER_DEVICE, WASHING_MACHINE_DEVICE
 
 
 class AbstractWriter(abc.ABC):
+    config: Config
+
     @abc.abstractmethod
     def createEmptyFiles(self):
         pass
@@ -33,20 +45,197 @@ class AbstractWriter(abc.ABC):
     def writeHousehold(self, config, house, num):
         pass
 
-    @abc.abstractmethod
-    def writeDeviceBufferTimeshiftable(self, machine, hnum):
+
+@dataclass
+class WashingMachineExecutions:
+    profile: pandas.Series
+    start_and_stop_moments: list[tuple[timedelta, timedelta]]  # In time since start of year!
+
+
+@dataclass
+class DishwasherExecutions:
+    profile: pandas.Series
+    start_and_stop_moments: list[tuple[timedelta, timedelta]]  # In time since start of year!
+
+
+class HouseHoldHeatingMethod(Enum):
+    HEAT_PUMP = 'Heat Pump'
+    COMBINED_HEAT_POWER = 'Combined Heat Power'
+    CONVENTIONAL = 'CONVENTIONAL'
+
+
+@dataclass
+class BatterySettings:
+    maximum_power_watt: float
+    capacity_watt_hour: float
+    initial_soc_watt_hour: float
+
+
+@dataclass
+class PVSettings:
+    elevation_angle_degrees: float
+    azimuth_degrees: float # north = 0, east = 90
+    efficiency_perc: float
+    area_m2: float
+
+
+@dataclass
+class EVChargeSession:
+    start_time_since_begin: timedelta
+    end_time_since_begin: timedelta
+    required_charge_watt_hour: float
+
+
+@dataclass
+class EVChargeSessions:
+    capacity_watt_hour: float
+    maximum_charging_power_watt: float
+    sessions: list[EVChargeSession]
+
+
+@dataclass
+class ThermostatSetpoint:
+    start_time_since_begin: timedelta
+    setpoint: float
+
+
+@dataclass
+class PandasHouseHold:
+    house_number: int
+
+    electricity_profile: pandas.Series
+    electricity_profile_group_other: pandas.Series
+    electricity_profile_group_inductive: pandas.Series
+    electricity_profile_group_fridges: pandas.Series
+    electricity_profile_group_electronics: pandas.Series
+    electricity_profile_group_lighting: pandas.Series
+    electricity_profile_group_standby: pandas.Series
+    electricity_profile_pv_production: pandas.Series
+
+    reactive_electricity_profile: pandas.Series
+    reactive_electricity_profile_group_other: pandas.Series
+    reactive_electricity_profile_group_inductive: pandas.Series
+    reactive_electricity_profile_group_fridges: pandas.Series
+    reactive_electricity_profile_group_electronics: pandas.Series
+    reactive_electricity_profile_group_lighting: pandas.Series
+    reactive_electricity_profile_group_standby: pandas.Series
+
+    heating_method: HouseHoldHeatingMethod
+    heatgain_profile: pandas.Series
+    heatgain_profile_persons: pandas.Series
+    heatgan_profile_devices: pandas.Series
+
+    heatdemand_profile: pandas.Series
+    heatdemand_profile_dhw_tap: pandas.Series
+
+    airflow_profile_ventilation: pandas.Series
+
+    battery_settings: Optional[BatterySettings]
+    pv_settings: Optional[PVSettings]
+
+    ev_charge_sessions: EVChargeSessions
+    washing_machine_executions: WashingMachineExecutions
+    dishwasher_executions: DishwasherExecutions
+    thermostat_setpoints: list[ThermostatSetpoint]
+
+
+class PandasWriter(AbstractWriter):
+    config: Config
+    households: list[PandasHouseHold]
+
+    def __init__(self, config: Config):
+        self.config = config
+        self.households = []
+
+    def createEmptyFiles(self):
         pass
 
-    @abc.abstractmethod
-    def writeDeviceTimeshiftable(self, machine, hnum):
+    def writeNeighbourhood(self, num):
         pass
 
-    @abc.abstractmethod
-    def writeDeviceThermostat(self, machine, hnum):
-        pass
+    def writeHousehold(self, config, house, num):
+        if house.hasHP:
+            heating_method = HouseHoldHeatingMethod.HEAT_PUMP
+        elif house.hasCHP:
+            heating_method = HouseHoldHeatingMethod.COMBINED_HEAT_POWER
+        else:
+            heating_method = HouseHoldHeatingMethod.CONVENTIONAL
+
+        battery_settings = None
+        if house.House.hasBattery:
+            battery_settings = BatterySettings(maximum_power_watt=house.House.batteryPower,
+                                               capacity_watt_hour=house.House.batteryCapacity,
+                                               initial_soc_watt_hour=round(house.House.batteryCapacity/2))
+
+        pv_settings = None
+        if house.House.hasPV:
+            pv_settings = PVSettings(elevation_angle_degrees=house.House.pvElevation,
+                                     azimuth_degrees=house.House.pvAzimuth,
+                                     efficiency_perc=house.House.pvEfficiency,
+                                     area_m2=house.House.pvArea)
+
+        household = PandasHouseHold(num,
+                                    heating_method=heating_method,
+                                    battery_settings=battery_settings,
+                                    pv_settings=pv_settings,
+                                    ev_charge_sessions=self.writeElectricVehicle(house.Devices[ELECTRIC_VEHICLE_DEVICE]),
+                                    washing_machine_executions=self.writeDeviceWashingMachine(house.Devices[WASHING_MACHINE_DEVICE]),
+                                    dishwasher_executions=self.writeDeviceDishwasher(house.Devices[DISHWASHER_DEVICE]),
+                                    thermostat_setpoints=self.writeDeviceThermostat(house.HeatingDevices[THERMOSTAT_DEVICE]),
+                                    electricity_profile=pandas.Series(house.Consumption['Total']),
+                                    electricity_profile_group_other=pandas.Series(house.Consumption['Other']),
+                                    electricity_profile_group_inductive=pandas.Series(house.Consumption['Inductive']),
+                                    electricity_profile_group_fridges=pandas.Series(house.Consumption['Fridges']),
+                                    electricity_profile_group_electronics=pandas.Series(house.Consumption['Electronics']),
+                                    electricity_profile_group_lighting=pandas.Series(house.Consumption['Lighting']),
+                                    electricity_profile_group_standby=pandas.Series(house.Consumption['Standby']),
+                                    electricity_profile_pv_production=pandas.Series(house.PVProfile),
+                                    reactive_electricity_profile=pandas.Series(house.ReactiveConsumption['Total']),
+                                    reactive_electricity_profile_group_other=pandas.Series(house.ReactiveConsumption['Other']),
+                                    reactive_electricity_profile_group_inductive=pandas.Series(house.ReactiveConsumption['Inductive']),
+                                    reactive_electricity_profile_group_fridges=pandas.Series(house.ReactiveConsumption['Fridges']),
+                                    reactive_electricity_profile_group_electronics=pandas.Series(house.ReactiveConsumption['Electronics']),
+                                    reactive_electricity_profile_group_lighting=pandas.Series(house.ReactiveConsumption['Lighting']),
+                                    reactive_electricity_profile_group_standby=pandas.Series(house.ReactiveConsumption['Standby']),
+                                    heatgain_profile=pandas.Series(house.HeatGain['Total']),
+                                    heatgain_profile_persons=pandas.Series(house.HeatGain['PersonGain']),
+                                    heatgan_profile_devices=pandas.Series(house.HeatGain['DeviceGain']),
+                                    heatdemand_profile=pandas.Series(house.HeatDemand['Total']),
+                                    heatdemand_profile_dhw_tap=pandas.Series(house.HeatDemand['DHWDemand']),
+                                    airflow_profile_ventilation=pandas.Series(house.HeatGain['VentFlow']))
+        self.households.append(household)
+
+    @staticmethod
+    def writeElectricVehicle(machine: DeviceElectricalVehicle) -> EVChargeSessions:
+        sessions = [EVChargeSession(timedelta(minutes=start_time_minutes),
+                                    timedelta(minutes=end_time_minutes),
+                                    required_charge_watt_hour)
+                    for start_time_minutes, end_time_minutes, required_charge_watt_hour
+                    in zip(machine.StartTimes, machine.EndTimes, machine.EnergyLoss)]
+
+        return EVChargeSessions(capacity_watt_hour=machine.BufferCapacity,
+                                maximum_charging_power_watt=machine.Consumption,
+                                sessions=sessions)
+
+    def writeDeviceWashingMachine(self, machine: DeviceWashingMachine) -> WashingMachineExecutions:
+        return WashingMachineExecutions(pandas.Series(machine.LongProfile),
+                                        [(timedelta(minutes=start_time_minutes), timedelta(minutes=end_time_minutes))
+                                         for start_time_minutes, end_time_minutes
+                                         in zip(machine.StartTimes, machine.EndTimes)])
+
+    def writeDeviceDishwasher(self, machine: DeviceDishwasher) -> DishwasherExecutions:
+        return DishwasherExecutions(machine.LongProfile,
+                                    [(timedelta(minutes=start_time_minutes), timedelta(minutes=end_time_minutes))
+                                     for start_time_minutes, end_time_minutes
+                                     in zip(machine.StartTimes, machine.EndTimes)])
+
+    def writeDeviceThermostat(self, machine: Thermostat) -> list[ThermostatSetpoint]:
+        return [ThermostatSetpoint(timedelta(minutes=start_time_minutes),
+                                   setpoint)
+                for start_time_minutes, setpoint in zip(machine.StartTimes, machine.Setpoints)]
 
 
-class DefaultWriter(AbstractWriter):
+class DEMKitWriter(AbstractWriter):
     output_folder: str
 
     def __init__(self, config: Config):
@@ -65,8 +254,8 @@ class DefaultWriter(AbstractWriter):
     def writeCsvRow(self, fname, hnum, data):
         if hnum == 0:
             with open(self.output_folder+'/'+fname, 'w') as f:
-                for l in range(0, len(data)):
-                    f.write(str(round(data[l])) + '\n')
+                for datum in data:
+                    f.write(str(round(datum)) + '\n')
         else:
             with open(self.output_folder+'/'+fname, 'r+') as f:
                 lines = f.readlines()
@@ -173,13 +362,11 @@ class DefaultWriter(AbstractWriter):
 
         # FIXME Add DHW Profile
 
-        #Write all devices:
-        for k, v, in house.Devices.items():
-            house.Devices[k].writeDevice(config, num)
-
-        #Write all heatdevices:
-        for k, v, in house.HeatingDevices.items():
-            house.HeatingDevices[k].writeDevice(num)
+        #Write all flexible devices:
+        self.writeElectricVehicle(house.Devices[ELECTRIC_VEHICLE_DEVICE], num)
+        self.writeDeviceDishwasher(house.Devices[DISHWASHER_DEVICE], num)
+        self.writeDeviceWashingMachine(house.Devices[WASHING_MACHINE_DEVICE], num)
+        self.writeDeviceThermostat(house.HeatingDevices[THERMOSTAT_DEVICE], num)
 
         #House specific devices
         if house.House.hasPV:
@@ -205,7 +392,7 @@ class DefaultWriter(AbstractWriter):
             text = str(num)+':CONVENTIONAL'	# Conventional heating device, e.g. natural gas boiler
             self.writeCsvLine('HeatingSettings.txt', num, text)
 
-    def writeDeviceBufferTimeshiftable(self, machine, hnum):
+    def writeElectricVehicle(self, machine: DeviceElectricalVehicle, hnum: int):
         if machine.BufferCapacity > 0 and len(machine.StartTimes) > 0:
             text = str(hnum)+':'
             text += profilegentools.createStringList(machine.StartTimes, None, 60)
@@ -223,8 +410,8 @@ class DefaultWriter(AbstractWriter):
             text += str(machine.BufferCapacity)+','+str(machine.Consumption)
             self.writeCsvLine('ElectricVehicle_Specs.txt', hnum, text)
 
-    def writeDeviceTimeshiftable(self, machine, hnum):
-        if machine.name == "WashingMachine" and len(machine.StartTimes) > 0:
+    def writeDeviceWashingMachine(self, machine: DeviceWashingMachine, hnum: int):
+        if len(machine.StartTimes) > 0:
             text = str(hnum)+':'
             text += profilegentools.createStringList(machine.StartTimes, None, 60)
             self.writeCsvLine('WashingMachine_Starttimes.txt', hnum, text)
@@ -237,7 +424,8 @@ class DefaultWriter(AbstractWriter):
             text += machine.LongProfile
             self.writeCsvLine('WashingMachine_Profile.txt', hnum, text)
 
-        elif len(machine.StartTimes) > 0:
+    def writeDeviceDishwasher(self, machine: DeviceDishwasher, hnum: int):
+        if len(machine.StartTimes) > 0:
             #In our case it is a dishwasher
             text = str(hnum)+':'
             text += profilegentools.createStringList(machine.StartTimes, None, 60)
@@ -251,7 +439,7 @@ class DefaultWriter(AbstractWriter):
             text += machine.LongProfile
             self.writeCsvLine('Dishwasher_Profile.txt', hnum, text)
 
-    def writeDeviceThermostat(self, machine, hnum):
+    def writeDeviceThermostat(self, machine: Thermostat, hnum: int):
         text = str(hnum)+':'
         text += profilegentools.createStringList(machine.StartTimes, None, 60)
         self.writeCsvLine('Thermostat_Starttimes.txt', hnum, text)

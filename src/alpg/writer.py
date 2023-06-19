@@ -47,15 +47,38 @@ class AbstractWriter(abc.ABC):
 
 
 @dataclass
-class WashingMachineExecutions:
-    profile: pandas.Series
+class TimeshiftableDevice(abc.ABC):
+    active_power_profile: pandas.Series
+    reactive_power_profile: pandas.Series
     start_and_stop_moments: list[tuple[timedelta, timedelta]]  # In time since start of year!
+
+    def active_power_profile_with_time_index(self,
+                                             global_start_timestamp: pandas.Timestamp,
+                                             profile_start: timedelta) -> pandas.Series:
+        active_power_profile = self.active_power_profile.copy()
+        profile_start_timestamp = global_start_timestamp + profile_start
+        active_power_profile.index = profile_start_timestamp + pandas.to_timedelta(active_power_profile.index,
+                                                                                   unit='minute')
+        return active_power_profile
+
+    def reactive_power_profile_with_time_index(self,
+                                             global_start_timestamp: pandas.Timestamp,
+                                             profile_start: timedelta) -> pandas.Series:
+        reactive_power_profile = self.reactive_power_profile.copy()
+        profile_start_timestamp = global_start_timestamp + profile_start
+        reactive_power_profile.index = profile_start_timestamp + pandas.to_timedelta(reactive_power_profile.index,
+                                                                                     unit='minute')
+        return reactive_power_profile
 
 
 @dataclass
-class DishwasherExecutions:
-    profile: pandas.Series
-    start_and_stop_moments: list[tuple[timedelta, timedelta]]  # In time since start of year!
+class WashingMachineExecutions(TimeshiftableDevice):
+    pass
+
+
+@dataclass
+class DishwasherExecutions(TimeshiftableDevice):
+    pass
 
 
 class HouseHoldHeatingMethod(Enum):
@@ -218,13 +241,17 @@ class PandasWriter(AbstractWriter):
                                 sessions=sessions)
 
     def writeDeviceWashingMachine(self, machine: DeviceWashingMachine) -> WashingMachineExecutions:
-        return WashingMachineExecutions(pandas.Series(machine.LongProfile),
+        active_power_profile, reactive_power_profile = self.convert_device_str_profile(machine.LongProfile)
+        return WashingMachineExecutions(active_power_profile,
+                                        reactive_power_profile,
                                         [(timedelta(minutes=start_time_minutes), timedelta(minutes=end_time_minutes))
                                          for start_time_minutes, end_time_minutes
                                          in zip(machine.StartTimes, machine.EndTimes)])
 
     def writeDeviceDishwasher(self, machine: DeviceDishwasher) -> DishwasherExecutions:
-        return DishwasherExecutions(machine.LongProfile,
+        active_power_profile, reactive_power_profile = self.convert_device_str_profile(machine.LongProfile)
+        return DishwasherExecutions(active_power_profile,
+                                    reactive_power_profile,
                                     [(timedelta(minutes=start_time_minutes), timedelta(minutes=end_time_minutes))
                                      for start_time_minutes, end_time_minutes
                                      in zip(machine.StartTimes, machine.EndTimes)])
@@ -233,6 +260,19 @@ class PandasWriter(AbstractWriter):
         return [ThermostatSetpoint(timedelta(minutes=start_time_minutes),
                                    setpoint)
                 for start_time_minutes, setpoint in zip(machine.StartTimes, machine.Setpoints)]
+
+    @staticmethod
+    def convert_device_str_profile(long_profile: str) -> tuple[pandas.Series, pandas.Series]:
+        complex_numbers = long_profile.split('),complex(')
+        active_power_profile = []
+        reactive_power_profile = []
+        for complex_number in complex_numbers:
+            cleaned_complex_number = complex_number.lstrip('complex(').rstrip(')')
+            active_power, _, reactive_power = cleaned_complex_number.partition(', ')
+            active_power_profile.append(float(active_power))
+            reactive_power_profile.append(float(reactive_power))
+
+        return pandas.Series(active_power_profile), pandas.Series(reactive_power_profile)
 
 
 class DEMKitWriter(AbstractWriter):

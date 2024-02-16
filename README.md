@@ -30,7 +30,7 @@ Here, the parameters are:
 
 So, to run the configs/example.py configuration and write results into output/results/, a command (depending on your operating system) like this should be issued on the commandline:
 ```
-python profilegenerator.py -c example -o results
+PYTHONPATH="$PYTHONPATH:src/" python -m alpg.profilegenerator -c example -o output
 ```
 
 The tool is written in the Python3 language and should work on all major platforms. 
